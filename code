@@ -1,0 +1,303 @@
+from typing import Final
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+cred = float(0)
+TOKEN: Final = 'TELEGRAM TOKEN'
+BOT_USERNAME: Final = '@Fradu101bot'
+
+# Your AI framework
+# AI with pre-trained cases, which adds on more cases as it runs to improve the accuracy.
+# The data is just an example
+data = [
+    ("This is a legitimate message.", 0),
+    ("Scam alert: You've won a prize!", 1),
+    ("Your package is out for delivery.", 0),
+    ("URGENT: Verify your account to avoid suspension.", 1),
+    ("Meeting at 3 PM in the conference room.", 0),
+    ("Congratulations! You've been selected for a survey.", 1),
+    ("100% win rate", 1),
+    ("Please click this link for free SGD", 1),
+    ("High pay part-time job", 1),
+    ("How are you", 0),
+    ("Sales! Only for a limited time", 1),
+    ("Best in the world", 1),
+    ("I am fine", 0),
+    ("free sex", 1),
+    ("thank you", 0),
+    ("Merchant merchandise repurchase task", 1),
+    ("Commodity Price", 1),
+    ("Free iWatch", 1),
+    ("Pay more, receive more", 1),
+    ("Work content is simple", 1),
+    ("I'm sorry", 0),
+    ("You look great today", 0),
+    ("Orange", 0),
+    ("Free IPhone", 1),
+    ("Poor kids", 1),
+    ("Your monthly newsletter is now available.", 0),
+    ("Invitation to attend our webinar on cybersecurity.", 0),
+    ("Congratulations! You've won a gift card.", 1),
+    ("Payment received for your recent order.", 0),
+    ("Urgent: Immediate action required to avoid account suspension.", 1),
+    ("Reminder: Upcoming team meeting on Friday.", 0),
+    ("Claim your prize by clicking the link below.", 1),
+    ("Thank you for your recent purchase. Receipt attached.", 0),
+    ("Important: Verify your email address to secure your account.", 1),
+    ("Your password has been successfully updated.", 0),
+    ("Confirmation: You've been added to the event guest list.", 0),
+    ("Notification: Your account balance is above the minimum.", 0),
+    ("Please give us your PIN Number", 1),
+    ("Welcome aboard! Your account setup is complete.", 0),
+    ("Reminder: Tomorrow is the deadline for project submissions.", 0),
+    ("Update: New articles available in our knowledge base.", 0),
+    ("Thank you for your inquiry. Here is the information you requested.", 0),
+    ("Notification: Your scheduled maintenance is complete.", 0),
+    ("Invitation: Join us for a live Q&A session this Friday.", 0),
+    ("Important: Review our updated terms and conditions.", 0),
+    ("Visited a museum over the weekend. It was amazing!", 0),
+    ("Can you send me the details for the client meeting?", 0),
+    ("Just adopted a new pet. Excited and nervous!", 0),
+    ("Booked tickets for the theater. Interested?", 0),
+    ("Attending a cooking class this weekend. Join me?", 0),
+    ("Received your message. Let's catch up soon.", 0),
+    ("Exploring new hiking trails. Any recommendations?", 0),
+    ("Planning a surprise party for a friend. Need ideas!", 0),
+    ("Reminder: Check the quarterly financial reports.", 0),
+    ("Click this link for free money", 1),
+    ("I love my girlfriend", 0),
+    ("This is not a scam", 1),
+    ("VIP group link", 1),
+    ("Sales receptionist", 1),
+    ("Expeceted salary $10000", 1),
+    ("Daily salary of $300-500", 1),
+    ("Initial pay before work", 1),
+    ("telegram auditor", 1),
+    ("Minors are prohibited from joining", 1),
+    ("Improve awareness and exposure", 1),
+    ("Blackpink is the best band", 0),
+    ("I am fine. Click here for a special offer!", 1),
+    ("Important: Verify your email address to secure your account.", 1),
+    ("Reminder: Upcoming team meeting on Friday. Click to confirm.", 1),
+    ("Claim your prize by clicking the link below. Act fast!", 1),
+    ("Booked tickets for the theater. Interested? Reply for details.", 1),
+    ("Can you send me the details for the client meeting? Urgent!", 1),
+    ("Earn some residual income as a result of your free time", 1),
+    ("real users", 1),
+    ("Please join the group to receive work every day", 1),
+    ("Higher salaries and commissions", 1),
+    ("Your package is out for delivery.", 0),
+    ("Meeting at 3 PM in the conference room.", 0),
+    ("How are you?", 0),
+    ("Congratulations! You've been selected for a survey.", 0),
+    ("Thank you for your recent purchase. Receipt attached.", 0),
+    ("Visited a museum over the weekend. It was amazing!", 0),
+    ("Have a nice day!", 0),
+    ("Received your message. Let's catch up soon.", 0),
+    ("Exploring new hiking trails. Any recommendations?", 0),
+    ("Planning a surprise party for a friend. Need ideas!", 0),
+    ("Reminder: Check the quarterly financial reports.", 0),
+    ("Just adopted a new pet. Excited and nervous!", 0),
+    ("You've won a prize! Call this number to receive it!", 1),
+    ("URGENT: Verify your account to avoid suspension.", 1),
+    ("Easy cash.", 1),
+    ("Please click this link for $1000 dollars.", 1),
+    ("High pay part-time job.", 1),
+    ("Sales! Only for a limited time.", 1),
+    ("Free iPhone - claim now!", 1),
+    ("Click this link for free money.", 1),
+    ("You've been selected for a exclusive offer. Claim now!", 1),
+    ("Unlock the secrets to instant wealth. Click for details.", 1),
+    ("Hurry! Limited-time discount on luxury watches. Buy now!", 1),
+    ("Your account is at risk. Verify your information immediately.", 1),
+    ("Congratulations! You're the lucky winner of a luxury cruise.", 1),
+    ("Immediate action required: Your account will be suspended.", 1),
+    ("Special deal: Buy one, get one free. Limited stock available!", 1),
+    ("Earn $1000 a day from home with this easy method. Click now!", 1),
+    ("You're pre-approved for a credit card with a high limit. Claim it!", 1),
+    ("Invest in this once-in-a-lifetime opportunity. Huge returns!", 1),
+    ("Your computer is infected. Download our antivirus now!", 1),
+    ("Secret method to lose weight fast! Click for the magic solution.", 1),
+    ("Free trial! Get exclusive access to premium content today.", 1),
+    ("Double your money in just one week. Don't miss out!", 1),
+    ("Unlock your potential with our miracle product. Order now!", 1),
+    ("Get a free psychic reading. Your future awaits! Click here.", 1),
+    ("Congratulations! You've been selected as a beta tester. Claim your reward.", 1),
+    ("Win an iPhone X. Click to spin the wheel and claim your prize!", 1),
+    ("Limited spots available in our work-from-home program. Sign up now!", 1),
+    ("Hello! Just wanted to remind you of our team meeting tomorrow at 10 AM.", 0),
+    ("Received your report. Great job on the analysis! Let me know if you need any feedback.", 0),
+    ("The project deadline has been extended by a week. Please review the updated timeline.", 0),
+    ("Hey, do you have a moment to discuss the client presentation for next week?", 0),
+    ("Congratulations on completing your training! You're now part of the team.", 0),
+    ("The quarterly financial reports are now available for your review.", 0),
+    ("Reminder: Tomorrow is the deadline for submitting your expense reports.", 0),
+    ("Thanks for your hard work on the project. Let's schedule a debrief meeting.", 0),
+    ("Received your inquiry. Here is the information you requested. Let me know if you need more.", 0),
+    ("The office will be closed on Friday for a company-wide team-building event.", 0),
+    ("Hey, just wanted to check in and see how you're doing. Let's catch up soon!", 0),
+    ("Your order has been confirmed. You can track the delivery status on our website.", 0),
+    ("Invitation: Join us for a live Q&A session on Friday. Your input is valuable!", 0),
+    ("Your recent payment has been received. Thank you for your promptness.", 0),
+    ("Important: Review our updated terms and conditions for using our services.", 0),
+    ("Just a friendly reminder to take breaks and stay hydrated during work hours.", 0),
+    ("Congratulations on your work anniversary! We appreciate your dedication.", 0),
+    ("Thank you for attending our recent webinar on cybersecurity. Stay informed!", 0),
+    ("Received your request for time off. Please confirm the dates and details.", 0),
+    ("Reminder: The team-building event is this Saturday. Looking forward to seeing you there!", 0),
+    ("Want to grab a bite?", 0),
+    ("Double your money immediately", 1),
+    ("Give 1 BTC for 4 BTC", 1),
+    ("Low risk investments, High rewards", 1),
+    ("No risks involved", 1),
+    ("Good morning! Hope you have a great day ahead.", 0),
+    ("Just wanted to say hello! How's your day going?", 0),
+    ("Wishing you a wonderful afternoon filled with positivity.", 0),
+    ("Hey there! What's the latest news on your end?", 0),
+    ("Good evening! How was your day at work?", 0),
+    ("Happy to see you online! How's everything on your side?", 0),
+    ("Just wanted to send a virtual hug. Take care!", 0),
+    ("Enjoying a cup of coffee and wanted to say hello!", 0),
+    ("Hello from the other side! Let me know if you need anything.", 0),
+    ("Good night! Sleep tight and dream sweetly.", 0),
+    ("Unlock financial freedom now! Join our exclusive money-making club.", 1),
+    ("Turn $10 into $1000 with our proven investment strategy!", 1),
+    ("Quick cash with minimal effort! Join our lucrative program.", 1),
+    ("Get rich in no time! Just follow our secret formula.", 1),
+    ("Exclusive offer: Double your money in 24 hours!", 1),
+    ("Invest and watch your money grow exponentially!", 1),
+    ("Secret method to become a millionaire overnight!", 1),
+    ("Guaranteed profits! Join now for a life-changing opportunity.", 1),
+    ("Fast and easy money! Join our get-rich-quick community.", 1),
+    ("Double your income with our groundbreaking investment plan.", 1),
+    ("Guaranteed returns! Invest now for a prosperous future.", 1),
+    ("Your computer has a virus! Call now for immediate assistance.", 1),
+    ("Security breach detected! Contact our tech support to fix it.", 1),
+    ("Your system is compromised! Dial our helpline for urgent help.", 1),
+    ("Alert! Your device is infected. Call our certified technicians.", 1),
+    ("Virus found on your computer! Call our tech support team ASAP.", 1),
+    ("Immediate action required! Your computer is at risk. Call us now.", 1),
+    ("Hey, it's been a while! I'm in a financial crisis. Can you lend me some money?", 1),
+    ("Urgent! I lost my wallet. Can you wire me some cash? I'll pay you back.", 1),
+    ("I got into an accident and need money for medical bills. Can you help?", 1),
+    ("Unexpected expenses came up. Can you transfer funds? I'm in a tight spot.", 1),
+    ("I invested in this amazing opportunity! Can you pitch in some money too?", 1),
+    ("My bank account got frozen. Can you lend me money for daily expenses?", 1),
+    ("I'm stranded in a foreign country. Can you send money for a ticket back?", 1),
+    ("I'm starting a business. Want to invest? Send me some funds to get started.", 1),
+    ("Exclusive deals at SuperMart this weekend! Save on your favorite groceries.", 0),
+    ("Enjoy a 20% discount on all items at MegaElectronics. Limited time offer!", 0),
+    ("Movie night alert! Get 2-for-1 tickets at StarCinemas this Friday.", 0),
+    ("Don't miss out on our special promotion: Buy 1, Get 1 Free at FashionHub!", 0),
+    ("New arrivals at SportZone! Visit us today and enjoy a 15% discount.", 0),
+    ("Congratulations! You've earned 100 bonus points on your loyalty card.", 0),
+    ("Discover the latest fashion trends at GlamBoutique. Extra 30% off on clearance items!", 0),
+    ("Explore our new menu at FoodieHaven. Order now and get free delivery!", 0),
+    ("Exciting news: Your favorite coffee shop is offering a buy-one-get-one-free deal.", 0),
+    ("Join us for Happy Hour at ChillBar. Enjoy discounted drinks from 5 PM to 7 PM.", 0),
+    ("SuperSavings Alert: Save big on household essentials at MegaMart.", 0),
+    ("Special offer at XYZ Bookstore: Buy 2 books, get the 3rd one at half price!", 0),
+    ("Plan your weekend getaway! Exclusive travel deals available at Wanderlust Tours.", 0),
+]
+
+X, y = zip(*data)
+vectorizer = TfidfVectorizer()
+X_tfidf = vectorizer.fit_transform(X)
+classifier = MultinomialNB()
+classifier.fit(X_tfidf, y)
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Hello! Welcome to Fradu!")
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Please type what you need assistance in!")
+
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Here are the commands:\n/check - Check the credibility of a message")
+
+
+def handle_response(forwarded_text: str) -> str:
+    # Check the credibility of the forwarded message
+    credibility = check_credibility(forwarded_text)
+    global cred
+    cred = credibility
+    # Provide a response based on credibility levels
+    if credibility > 0.59:
+        return 'This message is highly suspicious. Exercise caution.'
+    elif credibility <= 0.59 and credibility > 0.41:
+        return 'This message appears to be somewhat suspicious.'
+    else:
+        return 'This message seems legitimate.'
+
+# AI framework to check message credibility
+def check_credibility(message_text: str) -> float:
+    message_tfidf = vectorizer.transform([message_text])
+    credibility = classifier.predict_proba(message_tfidf)[0][1]
+    return credibility
+async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check if the command is used explicitly
+    if not context.args:
+        await update.message.reply_text("Please use the /check command explicitly in reply to a forwarded message.")
+        return
+
+    # Check if the command is used in reply to a message
+    if update.message.reply_to_message is None:
+        await update.message.reply_text("Please use the /check command in reply to a forwarded message.")
+        return
+
+    # Extract the forwarded message text
+    forwarded_text = update.message.reply_to_message.text
+
+    # Check the credibility of the forwarded message
+    credibility = check_credibility(forwarded_text)
+    cred = credibility
+    # Print credibility to the console
+    print(f"Credibility of the forwarded message: {credibility:.2f}")
+    print(credibility)
+    # Respond with the credibility value
+    await update.message.reply_text(f"Credibility of the forwarded message: {credibility:.2f}")
+
+
+'''There will be the usage of an AI chat generator here to generate text based on what the user has entered 
+related to scams and fraud query. The AI chat generator will be trained beforehand. To not confuse the bot, users will have to type 
+in the /check command first and then forward the suspicious message, in order to use the checking credibility function. Otherwise Fradu will 
+act as a Chatbot that raises awareness of potential scams and frauds.'''
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Tells us what chat type it is   (we put into variable, then put into format)
+    message_type: str = update.message.chat.type
+    text: str = update.message.text
+
+    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
+
+    if message_type == 'group':
+        if BOT_USERNAME in text:
+            # replace the bot name with whitespace, dw it to be processed
+            # Then we pass it to handle response
+            new_text: str = text.replace(BOT_USERNAME, ' ').strip()
+            response: str = handle_response(new_text)
+        else:
+            return
+    else:
+        # for private chat to work
+        response: str = handle_response(text)
+
+    print('Bot ', response)
+    await update.message.reply_text(response)
+
+    print(cred)
+
+
+if __name__ == "__main__":
+    print('Starting bot...')
+    app = Application.builder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler('start', start_command))
+    app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('menu', menu_command))
+    app.add_handler(CommandHandler('check', check_command))
+
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+
+    app.run_polling(poll_interval=5)
