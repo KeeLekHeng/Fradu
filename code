@@ -18,6 +18,9 @@ data = [
     ("URGENT: Verify your account to avoid suspension.", 1),
     ("Meeting at 3 PM in the conference room.", 0),
     ("Congratulations! You've been selected for a survey.", 1),
+    ("What can you do", 0),
+    ("huh", 0),
+    ("Fun days", 0),
     ("100% win rate", 1),
     ("Please click this link for free SGD", 1),
     ("High pay part-time job", 1),
@@ -89,6 +92,9 @@ data = [
     ("Please join the group to receive work every day", 1),
     ("Higher salaries and commissions", 1),
     ("Your package is out for delivery.", 0),
+    ("lol", 0),
+    ("swag", 0),
+    ("oh my goodness", 0),
     ("Meeting at 3 PM in the conference room.", 0),
     ("How are you?", 0),
     ("Congratulations! You've been selected for a survey.", 0),
@@ -209,7 +215,7 @@ classifier = MultinomialNB()
 classifier.fit(X_tfidf, y)
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Welcome to Fradu!")
+    await update.message.reply_text("Hello! Welcome to Fradu! Please type in the message you want us to check for suspicious intent")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Please type what you need assistance in!")
